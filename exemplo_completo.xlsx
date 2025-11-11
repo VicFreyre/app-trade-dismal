@@ -1,0 +1,26 @@
+Planilha 1 - Indicadores:
+mes	notames	itb	pdv	fachadas	pitstop	academia
+1	2024	10	12	5	12	15
+2	2024	15	18	8	14	16
+3	2024	12	15	6	13	17
+4	2024	18	20	10	15	18
+5	2024	16	22	12	14	19
+6	2024	14	19	9	15	18
+7	2024	20	25	15	15	20
+8	2024	17	21	11	14	17
+9	2024	13	15	8	15	18
+10	2024	0	0	0	0	0
+11	2024	0	0	0	0	0
+12	2024	0	0	0	0	0
+
+Planilha 2 - Vendedores:
+equipe	vendedor	mes	pdv meta	pdv real	fachada meta	fachada real	pitstop meta	pitstop real	academia moura meta	academia moura real
+Manoel	Eduardo	1	1	2	0	1	1	1	1	0
+Manoel	Joaquim B.	1	2	2	0	0	0	0	1	1
+Manoel	Dorivan	1	1	1	1	0	0	0	0	0
+Manoel	Marcia	1	0	0	0	0	0	0	0	0
+Manoel	Joaquim Jr	1	2	2	0	0	0	0	0	0
+Wellington	Jocimar	1	1	0	0	0	0	0	1	2
+Wellington	José Neto	1	1	1	0	0	0	0	0	0
+Wellington	Luis Felipe	1	2	2	0	0	0	0	0	0
+Wellington	Thayna	1	2	3	0	0	1	1	1	1

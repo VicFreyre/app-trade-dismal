@@ -1,13 +1,30 @@
-import React, { useState, Component } from 'react';
-import { BarChart3, Users, TrendingUp, Calendar } from 'lucide-react';
-import CircularGauge from './components/CircularGauge';
+import React, { useState, useEffect, Component } from 'react';
+import { BarChart3, Users, Calendar } from 'lucide-react';
+import SemiCircularGauge from './components/SemiCircularGauge';
 import MonthlyChart from './components/MonthlyChart';
 import VendorTable from './components/VendorTable';
 import FilterBar from './components/FilterBar';
+import ExcelImport from './components/ExcelImport';
 
 type IndicatorKey = 'itb' | 'pdv' | 'fachada' | 'pitstop' | 'academia';
-type MonthData = Record<IndicatorKey, number>;
+type MonthData = Record<IndicatorKey, number> & {
+  evolucao: string;
+  real: number;
+  performance: number;
+};
 type DataState = Record<number, Record<number, MonthData>>;
+
+interface VendorData {
+  name: string;
+  team: 'Manoel' | 'Wellington';
+  area: string;
+  month: number;
+  year: number;
+  pdv: { meta: number; real: number };
+  fachadas: { meta: number; real: number };
+  pitStop: { meta: number; real: number };
+  academia: { meta: number; real: number };
+}
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
   constructor(props: { children: React.ReactNode }) {
@@ -37,24 +54,32 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = useState(8); // Forçar setembro para testar
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [vendors, setVendors] = useState<VendorData[]>([]);
+  const [isViewerAuthed, setIsViewerAuthed] = useState<boolean>(false);
+
+  // Detectar modo admin (somente máquina local) ou público via querystring
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const forcePublic = searchParams.get('public') === '1' || searchParams.get('mode') === 'public';
+  const isLocalHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const isAdmin = !forcePublic && isLocalHost;
 
   // Dados dos indicadores principais por mês
   const [monthlyIndicators, setMonthlyIndicators] = useState<DataState>({
     2024: {
-      0: { itb: 10, pdv: 12, fachada: 5, pitstop: 12, academia: 15 }, // Janeiro
-      1: { itb: 15, pdv: 18, fachada: 8, pitstop: 14, academia: 16 }, // Fevereiro
-      2: { itb: 12, pdv: 15, fachada: 6, pitstop: 13, academia: 17 }, // Março
-      3: { itb: 18, pdv: 20, fachada: 10, pitstop: 15, academia: 18 }, // Abril
-      4: { itb: 16, pdv: 22, fachada: 12, pitstop: 14, academia: 19 }, // Maio
-      5: { itb: 14, pdv: 19, fachada: 9, pitstop: 15, academia: 18 }, // Junho
-      6: { itb: 20, pdv: 25, fachada: 15, pitstop: 15, academia: 20 }, // Julho
-      7: { itb: 17, pdv: 21, fachada: 11, pitstop: 14, academia: 17 }, // Agosto
-      8: { itb: 13, pdv: 15, fachada: 8, pitstop: 15, academia: 18 }, // Setembro (atual)
-      9: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 }, // Outubro
-      10: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 }, // Novembro
-      11: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 }, // Dezembro
+      0: { itb: 10, pdv: 12, fachada: 5, pitstop: 12, academia: 15, evolucao: 'Janeiro', real: 54, performance: 75.5 }, // Janeiro
+      1: { itb: 15, pdv: 18, fachada: 8, pitstop: 14, academia: 16, evolucao: 'Fevereiro', real: 71, performance: 88.8 }, // Fevereiro
+      2: { itb: 12, pdv: 15, fachada: 6, pitstop: 13, academia: 17, evolucao: 'Março', real: 63, performance: 78.8 }, // Março
+      3: { itb: 18, pdv: 20, fachada: 10, pitstop: 15, academia: 18, evolucao: 'Abril', real: 81, performance: 100 }, // Abril
+      4: { itb: 16, pdv: 22, fachada: 12, pitstop: 14, academia: 19, evolucao: 'Maio', real: 83, performance: 100 }, // Maio
+      5: { itb: 14, pdv: 19, fachada: 9, pitstop: 15, academia: 18, evolucao: 'Junho', real: 75, performance: 93.8 }, // Junho
+      6: { itb: 20, pdv: 25, fachada: 15, pitstop: 15, academia: 20, evolucao: 'Julho', real: 95, performance: 100 }, // Julho
+      7: { itb: 17, pdv: 21, fachada: 11, pitstop: 14, academia: 17, evolucao: 'Agosto', real: 80, performance: 100 }, // Agosto
+      8: { itb: 13, pdv: 15, fachada: 8, pitstop: 15, academia: 18, evolucao: 'Setembro', real: 69, performance: 86.3 }, // Setembro (atual)
+      9: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, evolucao: 'Outubro', real: 0, performance: 0 }, // Outubro
+      10: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, evolucao: 'Novembro', real: 0, performance: 0 }, // Novembro
+      11: { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, evolucao: 'Dezembro', real: 0, performance: 0 }, // Dezembro
     }
   });
 
@@ -66,57 +91,73 @@ function App() {
     academia: { target: 20, name: 'Academia Moura' }
   };
 
+  // Carregar dados persistentes (localStorage) na inicialização
+  useEffect(() => {
+    try {
+      const savedIndicators = localStorage.getItem('dashtrade_monthlyIndicators');
+      const savedVendors = localStorage.getItem('dashtrade_vendors');
+      if (savedIndicators) {
+        const parsed = JSON.parse(savedIndicators);
+        if (parsed && typeof parsed === 'object') {
+          setMonthlyIndicators((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+      if (savedVendors) {
+        const parsedVendors = JSON.parse(savedVendors);
+        if (Array.isArray(parsedVendors)) setVendors(parsedVendors);
+      }
+    } catch {
+      // ignore
+    }
+    // Autenticação do viewer pública mantida na sessão
+    const authed = sessionStorage.getItem('dashtrade_viewer_authed') === '1';
+    setIsViewerAuthed(authed);
+  }, []);
+
   const getCurrentIndicators = () => {
     const yearData = monthlyIndicators[selectedYear] || {};
-    const monthData: MonthData = yearData[selectedMonth] || { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 };
+    const monthData: MonthData = yearData[selectedMonth] || { 
+      itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, 
+      evolucao: '', real: 0, performance: 0 
+    };
+    
+    
+    // Garantir que os valores sejam números válidos
+    const safeValue = (val: any) => {
+      const num = Number(val);
+      return isNaN(num) || !isFinite(num) ? 0 : num;
+    };
     
     return {
-      itb: { value: monthData.itb, target: indicators.itb.target, name: indicators.itb.name },
-      pdv: { value: monthData.pdv, target: indicators.pdv.target, name: indicators.pdv.name },
-      fachada: { value: monthData.fachada, target: indicators.fachada.target, name: indicators.fachada.name },
-      pitstop: { value: monthData.pitstop, target: indicators.pitstop.target, name: indicators.pitstop.name },
-      academia: { value: monthData.academia, target: indicators.academia.target, name: indicators.academia.name }
+      itb: { value: safeValue(monthData.itb), target: indicators.itb.target, name: indicators.itb.name },
+      pdv: { value: safeValue(monthData.pdv), target: indicators.pdv.target, name: indicators.pdv.name },
+      fachada: { value: safeValue(monthData.fachada), target: indicators.fachada.target, name: indicators.fachada.name },
+      pitstop: { value: safeValue(monthData.pitstop), target: indicators.pitstop.target, name: indicators.pitstop.name },
+      academia: { value: safeValue(monthData.academia), target: indicators.academia.target, name: indicators.academia.name }
     };
   };
 
-  const setMonthTotal = (monthIndex: number, newTotal: number) => {
-    if (isNaN(newTotal) || newTotal < 0) return;
-    setMonthlyIndicators(prev => {
-      const yearData = prev[selectedYear] || {} as Record<number, MonthData>;
-      const monthData: MonthData = yearData[monthIndex] || { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 };
-      const indicatorsKeys: IndicatorKey[] = ['itb', 'pdv', 'fachada', 'pitstop', 'academia'];
-      const parts = indicatorsKeys.length;
-      const base = Math.floor(newTotal / parts);
-      const remainder = newTotal % parts;
-      const distributed: Partial<MonthData> = {};
-      indicatorsKeys.forEach((key, idx) => {
-        distributed[key] = base + (idx < remainder ? 1 : 0);
-      });
 
-      return {
-        ...prev,
-        [selectedYear]: {
-          ...(prev[selectedYear] || {}),
-          [monthIndex]: {
-            ...monthData,
-            ...(distributed as MonthData)
-          }
-        }
-      };
+
+  const handleIndicatorsImport = (importedData: DataState) => {
+    setMonthlyIndicators(prev => {
+      const merged = { ...prev, ...importedData } as DataState;
+      try {
+        localStorage.setItem('dashtrade_monthlyIndicators', JSON.stringify(merged));
+      } catch {
+        // ignore storage failures
+      }
+      return merged;
     });
   };
 
-  const updateIndicator = (key: IndicatorKey, newValue: number) => {
-    setMonthlyIndicators(prev => ({
-      ...prev,
-      [selectedYear]: {
-        ...(prev[selectedYear] || {}),
-        [selectedMonth]: {
-          ...(((prev[selectedYear] || {}) as Record<number, MonthData>)[selectedMonth] || {}),
-          [key]: newValue
-        }
-      }
-    }));
+  const handleVendorsImport = (importedData: VendorData[]) => {
+    setVendors(importedData);
+    try {
+      localStorage.setItem('dashtrade_vendors', JSON.stringify(importedData));
+    } catch {
+      // ignore
+    }
   };
 
   // Gerar dados mensais para o gráfico
@@ -125,20 +166,53 @@ function App() {
     const yearData = monthlyIndicators[selectedYear] || {};
     
     return months.map((month, index) => {
-      const monthData: MonthData = yearData[index] || { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0 };
-      const total = monthData.itb + monthData.pdv + monthData.fachada + monthData.pitstop + monthData.academia;
+      const monthData: MonthData = yearData[index] || { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, evolucao: '', real: 0, performance: 0 };
+      const value = monthData.real || (monthData.itb + monthData.pdv + monthData.fachada + monthData.pitstop + monthData.academia);
       
       return {
         month: month.toLowerCase(),
-        value: total,
+        value: value,
         isCurrentMonth: index === selectedMonth
       };
     });
   };
 
   const currentIndicators = getCurrentIndicators();
-  const totalDiagnostico = Object.values(currentIndicators).reduce((sum, ind) => sum + ind.value, 0);
-  const totalMeta = Object.values(currentIndicators).reduce((sum, ind) => sum + ind.target, 0);
+  
+  const currentMonthData = monthlyIndicators[selectedYear]?.[selectedMonth] || { itb: 0, pdv: 0, fachada: 0, pitstop: 0, academia: 0, evolucao: '', real: 0, performance: 0 };
+  const totalDiagnostico = currentMonthData.real || Object.values(currentIndicators).reduce((sum, ind) => sum + ind.value, 0);
+  const totalMeta = 100; // Meta fixa de 100
+  const performance = currentMonthData.performance || Math.round((totalDiagnostico / totalMeta) * 100);
+
+  // Gate público com senha simples
+  if (!isAdmin && !isViewerAuthed) {
+    let passwordInput = '';
+    const handleSubmit = () => {
+      if (passwordInput === 'dismal') {
+        sessionStorage.setItem('dashtrade_viewer_authed', '1');
+        setIsViewerAuthed(true);
+      } else {
+        alert('Senha incorreta');
+      }
+    };
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+        <div className="w-full max-w-sm bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-6">
+          <h1 className="text-lg font-semibold text-slate-800 mb-2 text-center">Acesso ao Dashboard</h1>
+          <p className="text-sm text-slate-600 mb-4 text-center">Insira a senha para visualizar.</p>
+          <input
+            type="password"
+            placeholder="Senha"
+            onChange={(e) => { passwordInput = e.target.value; }}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button onClick={handleSubmit} className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium">
+            Entrar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
@@ -160,30 +234,53 @@ function App() {
               </div>
             </div>
             
-            <nav className="flex space-x-1 bg-slate-100 rounded-lg p-1">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'dashboard'
-                    ? 'bg-white text-blue-700 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <BarChart3 className="h-4 w-4 inline mr-2" />
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab('vendors')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  activeTab === 'vendors'
-                    ? 'bg-white text-blue-700 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <Users className="h-4 w-4 inline mr-2" />
-                Por Vendedor
-              </button>
-            </nav>
+            <div className="flex items-center space-x-4">
+              <nav className="flex space-x-1 bg-slate-100 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'dashboard'
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4 inline mr-2" />
+                  Dashboard
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setActiveTab('vendors')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      activeTab === 'vendors'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Users className="h-4 w-4 inline mr-2" />
+                    Por Vendedor
+                  </button>
+                )}
+              </nav>
+              {isAdmin ? (
+                <ExcelImport 
+                  onIndicatorsImport={handleIndicatorsImport}
+                  onVendorsImport={handleVendorsImport}
+                />
+              ) : (
+                <a
+                  className="text-xs text-slate-600 hover:text-blue-700 underline"
+                  href={(() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('public', '1');
+                    return url.toString();
+                  })()}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Link público
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -201,16 +298,14 @@ function App() {
             />
 
             {/* Indicadores Principais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {Object.entries(currentIndicators).map(([key, indicator]) => (
-                <div key={key} className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border border-white/20 p-4 hover:shadow-md hover:bg-white/80 transition-all duration-300">
-                  <CircularGauge
-                    value={indicator.value}
-                    max={indicator.target}
-                    title={indicator.name}
-                    onValueChange={(newValue) => updateIndicator(key as IndicatorKey, newValue)}
-                  />
-                </div>
+                <SemiCircularGauge
+                  key={key}
+                  value={indicator.value}
+                  max={indicator.target}
+                  title={indicator.name}
+                />
               ))}
             </div>
 
@@ -229,14 +324,14 @@ function App() {
                     <div className="text-xs text-slate-600 font-semibold">Real</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-amber-600">100</div>
+                    <div className="text-2xl font-bold text-amber-600">{totalMeta}</div>
                     <div className="text-xs text-slate-500 font-medium">Meta Total</div>
                   </div>
                   <div className="text-center">
                     <div className={`text-2xl font-bold ${
-                      (Math.round((totalDiagnostico / totalMeta) * 100)) >= 80 ? 'text-green-600' : 'text-red-500'
+                      performance >= 80 ? 'text-green-600' : 'text-red-500'
                     }`}>
-                      {Math.round((totalDiagnostico / totalMeta) * 100)}%
+                      {performance}%
                     </div>
                     <div className="text-xs text-slate-500 font-medium">Performance</div>
                   </div>
@@ -248,19 +343,7 @@ function App() {
                 target={80} 
                 selectedMonth={selectedMonth}
                 onMonthClick={(monthIndex) => {
-                  if (monthIndex !== selectedMonth) {
-                    setSelectedMonth(monthIndex);
-                  } else {
-                    const input = window.prompt('Definir pontuação total do mês:', totalDiagnostico.toString());
-                    if (input !== null) {
-                      const parsed = parseInt(input);
-                      if (!isNaN(parsed) && parsed >= 0) {
-                        setMonthTotal(monthIndex, parsed);
-                      } else {
-                        alert('Valor inválido. Insira um número inteiro não negativo.');
-                      }
-                    }
-                  }
+                  setSelectedMonth(monthIndex);
                 }}
               />
             </div>
@@ -282,6 +365,10 @@ function App() {
           <VendorTable 
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
+            vendors={vendors}
+            onVendorsUpdate={setVendors}
+            onMonthChange={setSelectedMonth}
+            onYearChange={setSelectedYear}
           />
         )}
         </ErrorBoundary>
